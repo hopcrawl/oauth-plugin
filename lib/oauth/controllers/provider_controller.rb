@@ -37,10 +37,7 @@ module OAuth
           user = authenticate_user(params[:x_auth_username], params[:x_auth_password])
           if user && current_client_application.xauth_enabled
       
-            @token = AccessToken.where(:user_id => user.id,
-                                       :client_application_id => current_client_application.id,
-                                       :invalidated_at => nil).limit(1).first
-            @token = AccessToken.create(:user => user, :client_application => current_client_application) if @token.blank?
+            @token = xauth_token(user, current_client_application)
       
             if @token
               render :text => @token.to_query
@@ -193,6 +190,11 @@ module OAuth
       def oauth2_token_client_credentials
         @token = Oauth2Token.create :client_application=>@client_application, :user=>@client_application.user, :scope=>params[:scope]
         render :json=>@token
+      end
+      
+      #Override with xauth token generation code
+      def xauth_token
+        return nil
       end
 
       # Override this to match your authorization page form
