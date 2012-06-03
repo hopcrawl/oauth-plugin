@@ -24,6 +24,15 @@ module OAuth
       end
 
       def access_token
+        @token = current_token && current_token.exchange!
+        if @token
+          render :text => @token.to_query
+        else
+          render :nothing => true, :status => 401
+        end
+      end
+
+      def access_token_xauth
         # To use custom failure response with devise, you need the following line.
         # see https://github.com/plataformatec/devise/wiki/How-To:-Provide-a-custom-failure-response-with-Warden
         warden.custom_failure!
