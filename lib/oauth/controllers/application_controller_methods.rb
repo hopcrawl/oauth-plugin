@@ -64,7 +64,12 @@ module OAuth
         end
 
         def oauth10_request_token
-          oauth10_token && oauth10_token.is_a?(::RequestToken) ? oauth10_token : nil
+          if params[:x_auth_mode] == 'client_auth'
+            # xAuth authentication
+            two_legged
+          else
+            oauth10_token && oauth10_token.is_a?(::RequestToken) ? oauth10_token : nil
+          end
         end
 
         def oauth10_access_token

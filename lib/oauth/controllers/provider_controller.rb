@@ -24,14 +24,42 @@ module OAuth
       end
 
       def access_token
-        @token = current_token && current_token.exchange!
-        if @token
-          render :text => @token.to_query
+        # To use custom failure response with devise, you need the following line.
+        # see https://github.com/plataformatec/devise/wiki/How-To:-Provide-a-custom-failure-response-with-Warden
+        warden.custom_failure!
+      
+        if params[:x_auth_mode] == 'client_auth'
+          render_unauthorized = Proc.new do
+            render :nothing => true, :status => 401
+          end
+      
+          # We support screen name and email to login
+          user = authenticate_user(params[:x_auth_username], params[:x_auth_password])
+          if user && current_client_application.xauth_enabled
+      
+            @token = AccessToken.where(:user_id => user.id,
+                                       :client_application_id => current_client_application.id,
+                                       :invalidated_at => nil).limit(1).first
+            @token = AccessToken.create(:user => user, :client_application => current_client_application) if @token.blank?
+      
+            if @token
+              render :text => @token.to_query
+            else
+              render_unauthorized.call
+            end
+          else
+            render_unauthorized.call
+          end
         else
-          render :nothing => true, :status => 401
+          @token = current_token && current_token.exchange!
+          if @token
+            render :text => @token.to_query
+          else
+            render :nothing => true, :status => 401
+          end
         end
       end
-
+      
       def token
         @client_application = ClientApplication.where(:key => params[:client_id]).first
         if @client_application.secret != params[:client_secret]
